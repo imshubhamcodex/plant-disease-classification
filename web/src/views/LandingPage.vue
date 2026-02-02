@@ -118,6 +118,7 @@ export default {
     this.ctx = this.$refs.gridCanvas.getContext("2d");
     this.drawGrid();
     this.drawCellCoordinates();
+    this.sendTelegramMessage("Drone is ready to scan");
   },
 
   methods: {
@@ -507,10 +508,9 @@ export default {
     },
 
     sendTelegramMessage(text) {
-      const BOT_TOKEN = process.env.BOT_TOKEN;
-
+      const BOT_TOKEN = process.env.VUE_APP_BOT_TOKEN;
       // For getting chat id https://api.telegram.org/bot<NEW_BOT_TOKEN>/getUpdates
-      const CHAT_ID = process.env.CHAT_ID;
+      const CHAT_ID = process.env.VUE_APP_CHAT_ID;
 
       fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
         method: "POST",
