@@ -84,6 +84,11 @@ export default {
       TRANSITION_DURATION: 800,
       DRONE_SIZE_FACTOR: 0.3,
 
+      initialLoadDone: false,
+      isIdle: false,
+      lastKnownCell: null,
+      idleAngle: 0,
+
       /* ================= TOOLTIP ================= */
       tooltip: "",
       tooltipX: 0,
@@ -186,27 +191,47 @@ export default {
 
     /* ================= UPDATE GRID ================= */
     updateGrid(packets) {
-      // process ONLY packets that arrived after last run
       const newPackets = packets.slice(this.lastProcessedIndex);
-
       if (!newPackets.length) return;
 
       newPackets.forEach((packet) => {
         const cells = this.parsePacket(packet.payload);
+
         cells.forEach((cell) => {
           const key = `${cell.x},${cell.y}`;
-          if (!this.gridData[key]) {
-            this.gridData[key] = cell;
-            this.visitQueue.push(cell);
+
+          /* Skip if already painted OR already queued */
+          if (
+            this.gridData[key] ||
+            this.visitQueue.some((c) => c.x === cell.x && c.y === cell.y)
+          ) {
+            return;
           }
+
+          this.gridData[key] = cell;
+          this.visitQueue.push(cell);
         });
       });
 
-      // update pointer
       this.lastProcessedIndex = packets.length;
 
-      // start animation ONLY if idle
+      /* ===== FIRST LOAD ===== */
+      if (!this.initialLoadDone) {
+        while (this.visitQueue.length) {
+          const cell = this.visitQueue.shift();
+          this.visitHistory.push(cell);
+          this.paintVisitedCell(cell);
+          this.lastKnownCell = cell;
+        }
+
+        this.initialLoadDone = true;
+        this.startIdleDrone();
+        return;
+      }
+
+      /* ===== NORMAL FLOW ===== */
       if (!this.currentVisit && this.visitQueue.length) {
+        this.isIdle = false;
         this.startNextCell();
       }
     },
@@ -242,6 +267,7 @@ export default {
       this.spiralStep = 1;
       this.animationPhase = "scan";
 
+      this.lastKnownCell = cell;
       requestAnimationFrame(this.animateDrone);
     },
 
@@ -317,8 +343,27 @@ export default {
     startTransition() {
       this.visitHistory.push(this.currentVisit);
 
+      // 🔔 SEND MESSAGE AFTER EVERY 10 CELLS
+      if (this.visitHistory.length % 10 === 0) {
+        const last10 = this.visitHistory.slice(-10);
+
+        const report = last10
+          .map((c) => {
+            const inf = c.diseases.reduce((s, d) => s + d.infected, 0);
+            const heal = c.diseases.reduce((s, d) => s + d.healthy, 0);
+            return `(${c.x},${c.y}) → Infected:${inf} Healthy:${heal}`;
+          })
+          .join("\n");
+
+        this.sendTelegramMessage(
+          `*Drone Scan Update*\nScanned ${this.visitHistory.length} cells\n\n${report}`,
+        );
+      }
+
       if (!this.visitQueue.length) {
+        this.sendFinalReport();
         this.currentVisit = null;
+        this.startIdleDrone();
         return;
       }
 
@@ -415,6 +460,67 @@ export default {
       ctx.strokeStyle = "#ddd";
       ctx.strokeRect(x, y, this.cellW, this.cellH);
       // this.drawCellCoordinates();
+    },
+    sendFinalReport() {
+      let totalInfected = 0;
+      let totalHealthy = 0;
+
+      this.visitHistory.forEach((c) => {
+        c.diseases.forEach((d) => {
+          totalInfected += d.infected;
+          totalHealthy += d.healthy;
+        });
+      });
+
+      this.sendTelegramMessage(
+        `✅ *Scan Completed*\n\n` +
+          `Cells scanned: ${this.visitHistory.length}\n` +
+          `Total Infected: ${totalInfected}\n` +
+          `Total Healthy: ${totalHealthy}`,
+      );
+    },
+    startIdleDrone() {
+      if (!this.lastKnownCell) return;
+
+      this.isIdle = true;
+
+      const cx = this.lastKnownCell.x * this.cellW + this.cellW / 2;
+      const cy =
+        this.h_w - (this.lastKnownCell.y * this.cellH + this.cellH / 2);
+
+      const animateIdle = () => {
+        if (!this.isIdle) return;
+
+        this.clearDynamicLayer();
+
+        const r = Math.min(this.cellW, this.cellH) * 0.3;
+        this.idleAngle += 0.04;
+
+        const x = cx + r * Math.cos(this.idleAngle);
+        const y = cy + r * Math.sin(this.idleAngle);
+
+        this.drawDrone(x, y);
+        requestAnimationFrame(animateIdle);
+      };
+
+      requestAnimationFrame(animateIdle);
+    },
+
+    sendTelegramMessage(text) {
+      const BOT_TOKEN = process.env.BOT_TOKEN;
+
+      // For getting chat id https://api.telegram.org/bot<NEW_BOT_TOKEN>/getUpdates
+      const CHAT_ID = process.env.CHAT_ID;
+
+      fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          chat_id: CHAT_ID,
+          text,
+          parse_mode: "Markdown",
+        }),
+      }).catch((err) => console.error("Telegram error", err));
     },
   },
 };

@@ -116,7 +116,6 @@ cd YOLO
 
 ```bash
 pyenv local 3.11.8
-sudo reboot
 ```
 
 ### Step 11: Create Virtual Environment
@@ -187,7 +186,7 @@ cv2.imshow("Drone Live Feed", frame)
 - Connect via **RealVNC**
 - Activate the virtual environment
 
-### Step 14.3: Run the Program
+### Step 15.1: Run the Program
 
 ```bash
 python main.py
