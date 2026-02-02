@@ -121,6 +121,7 @@ def fake_gps():
 
             if scan_gy >= GRID_ROWS:
                 scan_done = True
+                scan_gx += 1
                 print("[SCAN]: Grid coverage complete")
         
         last_gps_update_time = now # Reset the timer
@@ -335,6 +336,17 @@ try:
         cell = gps_to_grid(lat, lon)
         if cell == (-1, -1):
             continue
+        
+        # if scan finished, flush last cell exactly once
+        if scan_done and current_cell is not None:
+            data = grid_data.pop(
+                current_cell,
+                {"gps": grid_to_gps(*current_cell), "diseases": {}}
+            )
+            print(f"[SCAN]: Final cell {current_cell} : SEND DATA")
+            save_grid(current_cell, data)
+            try_transmit()
+            break
         # ==============================================
         
         detections = yolo_infer(frame)  # Detection
