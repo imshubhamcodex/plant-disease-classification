@@ -17,7 +17,7 @@ Copy the `inet` address under `wlan0`.
 ### Step 2: Enable VNC
 
 ```bash
-raspi-config
+sudo raspi-config
 ```
 
 Navigate to:
