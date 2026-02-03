@@ -204,13 +204,16 @@ def yolo_cls_infer(frame, prob_thresh=0.9, max_classes=5):
 
         disease = r.names[int(cls_id)]
 
-        x_offset = int((count % 3) * w * 0.15)
-        y_offset = int((count // 3) * h * 0.15)
+        grid_x = (count % 3) - 1     # -1, 0, +1
+        grid_y = (count // 3) - 1   # -1, 0, +1
 
-        x1 = int(w * 0.2 + x_offset)
-        y1 = int(h * 0.2 + y_offset)
-        x2 = int(w * 0.5 + x_offset)
-        y2 = int(h * 0.5 + y_offset)
+        x_offset = int(grid_x * w * 0.1)
+        y_offset = int(grid_y * h * 0.1)
+
+        x1 = int(w * 0.25 + x_offset)
+        y1 = int(h * 0.25 + y_offset)
+        x2 = int(w * 0.55 + x_offset)
+        y2 = int(h * 0.55 + y_offset)
 
         area = (x2 - x1) * (y2 - y1)
         infected_px = area * conf
