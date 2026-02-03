@@ -203,19 +203,31 @@ def yolo_cls_infer(frame, prob_thresh=0.9, max_classes=5):
             break
 
         disease = r.names[int(cls_id)]
-
+        
         grid_x = (count % 3) - 1     # -1, 0, +1
         grid_y = (count // 3) - 1   # -1, 0, +1
 
+        # Grid-based offsets
         x_offset = int(grid_x * w * 0.1)
         y_offset = int(grid_y * h * 0.1)
 
-        x1 = int(w * 0.25 + x_offset)
-        y1 = int(h * 0.25 + y_offset)
-        x2 = int(w * 0.55 + x_offset)
-        y2 = int(h * 0.55 + y_offset)
+        # Global right shift (5% of width)
+        right_shift = int(w * 0.05)
 
-        area = (x2 - x1) * (y2 - y1)
+        # Larger ROI (40% of frame)
+        x1 = int(w * 0.20 + x_offset + right_shift)
+        y1 = int(h * 0.20 + y_offset)
+        x2 = int(w * 0.60 + x_offset + right_shift)
+        y2 = int(h * 0.60 + y_offset)
+
+        # Clamp to image boundaries (IMPORTANT)
+        x1 = max(0, x1)
+        y1 = max(0, y1)
+        x2 = min(w, x2)
+        y2 = min(h, y2)
+
+        # Area calculation
+        area = max(0, (x2 - x1) * (y2 - y1))
         infected_px = area * conf
         healthy_px = area * (1 - conf)
 
@@ -452,7 +464,7 @@ try:
             # -----------------------------
             
             # Blink LED parallel
-            threading.Thread(target=blink_led, args=(1, 0.2), daemon=True).start()
+            threading.Thread(target=blink_led, args=(2, 0.2), daemon=True).start()
         
             current_cell = cell
         # ==================================================
