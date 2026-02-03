@@ -11,6 +11,10 @@ from threading import Lock
 import queue
 import numpy as np
 import os
+import RPi.GPIO as GPIO
+from openpyxl import Workbook, load_workbook
+
+
 os.environ["OMP_NUM_THREADS"] = "2"
 os.environ["OPENBLAS_NUM_THREADS"] = "2"
 os.environ["MKL_NUM_THREADS"] = "2"
@@ -19,6 +23,10 @@ os.environ["VECLIB_MAXIMUM_THREADS"] = "2"
 os.environ["NUMBA_NUM_THREADS"] = "2"
 
 
+
+LED_PIN = 24  # GPIO pin your LED is connected to
+GPIO.setmode(GPIO.BCM)
+GPIO.setup(LED_PIN, GPIO.OUT)
 
 # =========================================================
 # INIT
@@ -37,6 +45,48 @@ last_tx_time = 0
 # FPS Calculation
 prev_time = time.time()
 fps = 0.0
+
+
+# =========================================================
+# DATA LOG INIT
+# =========================================================
+# Excel file path
+EXCEL_PATH = "plant_data.xlsx"
+# Initialize Excel
+if os.path.exists(EXCEL_PATH):
+    wb = load_workbook(EXCEL_PATH)
+    ws = wb.active
+else:
+    wb = Workbook()
+    ws = wb.active
+    ws.append(["Timestamp", "Latitude", "Longitude", "Cell", "Disease", "Infected Area", "Healthy Area", "Leaves"])
+
+def log_cell_to_excel(cell, data):
+    lat, lon = data["gps"]
+    ts = time.strftime("%Y-%m-%d %H:%M:%S")
+
+    if not data["diseases"]:
+        ws.append([
+            ts, lat, lon,
+            f"{cell}",
+            "NO DATA",
+            0, 0, 0
+        ])
+    else:
+        for disease, s in data["diseases"].items():
+            ws.append([
+                ts,
+                lat,
+                lon,
+                f"{cell}",
+                disease,
+                int(s["infected_area"] / px_to_area_scale),
+                int(s["healthy_area"] / px_to_area_scale),
+                s["leaves"]
+            ])
+
+    wb.save(EXCEL_PATH)
+
 
 
 # =========================================================
@@ -132,7 +182,7 @@ def fake_gps():
 # =========================================================
 # YOLO CLS
 # =========================================================
-def yolo_cls_infer(frame, prob_thresh=0.9, max_classes=3):
+def yolo_cls_infer(frame, prob_thresh=0.9, max_classes=5):
     results = model.predict(frame, imgsz=INFERENCE_SIZE, verbose=False)
     
     detections = []
@@ -166,7 +216,7 @@ def yolo_cls_infer(frame, prob_thresh=0.9, max_classes=3):
         infected_px = area * conf
         healthy_px = area * (1 - conf)
 
-        detections.append((disease, infected_px, healthy_px, (x1, y1, x2, y2)))
+        detections.append((disease, infected_px, healthy_px, conf, (x1, y1, x2, y2)))
         print(f"[YOLO-CLS]: Classify {disease} ({conf:.2f})")
         count += 1
 
@@ -311,6 +361,15 @@ def save_grid(cell, data):
     tx_buffer.append(payload)
     MSG_ID += 1
     print("[TX-BUFFER]: QUEUED")
+    
+    
+def blink_led(times=1, duration=0.2):
+    for _ in range(times):
+        GPIO.output(LED_PIN, GPIO.HIGH)
+        time.sleep(duration)
+        GPIO.output(LED_PIN, GPIO.LOW)
+        time.sleep(duration)
+
 
 # =========================================================
 # MAIN LOOP
@@ -344,14 +403,29 @@ try:
                 {"gps": grid_to_gps(*current_cell), "diseases": {}}
             )
             print(f"[SCAN]: Final cell {current_cell} : SEND DATA")
-            save_grid(current_cell, data)
-            try_transmit()
+            
+            log_cell_to_excel(current_cell, data)   # Sent to Log
+            save_grid(current_cell, data)           # Sent to Base
+            try_transmit()                          # Sent to Base
             break
         # ==============================================
         
         detections = yolo_infer(frame)  # Detection
 
-        for disease, infected, healthy, bbox in detections: # Create Dataset of current cell
+        for disease, infected, healthy, conf, bbox in detections: # Create Dataset of current cell
+            
+            # Draw on cam feed
+            x1, y1, x2, y2 = bbox
+            # Bounding box
+            cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 0, 255), 2)
+            # Label text
+            label = f"{disease} ({conf*100:.1f}%)"
+            # Background for text
+            (tw, th), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
+            cv2.rectangle(frame, (x1, y1 - th - 6), (x1 + tw + 4, y1), (0, 0, 255), -1)
+            cv2.putText(frame, label, (x1 + 2, y1 - 4), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+
+            # Noramal flow matching & updating leaf
             leaf_id, is_new_leaf = match_or_create_leaf(cell, bbox)
             update_grid(cell, leaf_id, disease, infected, healthy)
 
@@ -369,6 +443,14 @@ try:
             )
             print(f"[CELL]: Leaving cell {current_cell} : SEND DATA")
             save_grid(current_cell, data)
+            
+            # ---------- EXCEL LOG ----------
+            log_cell_to_excel(current_cell, data)
+            # -----------------------------
+            
+            # Blink LED parallel
+            threading.Thread(target=blink_led, args=(1, 0.2), daemon=True).start()
+        
             current_cell = cell
         # ==================================================
         
@@ -379,6 +461,12 @@ try:
         prev_time = now
 
         cv2.putText(frame, f"FPS: {fps:.2f}", (10,30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0,255,0), 2)
+        
+        cell_text = f"Cell: ({cell[0]}, {cell[1]})"
+        cv2.putText(frame, cell_text, (10, 65), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 0), 2)
+    
+        cv2.putText(frame, f"Number of Detections: {len(detections)}", (10, 95), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 255), 2)
+        
         cv2.imshow("Drone Live Feed", frame)
         # ==================================================
         
@@ -392,4 +480,6 @@ try:
             break
     
 finally:
+    GPIO.output(LED_PIN, GPIO.LOW)
+    GPIO.cleanup()
     cv2.destroyAllWindows()

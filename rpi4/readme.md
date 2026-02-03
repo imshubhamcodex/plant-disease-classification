@@ -141,7 +141,7 @@ pip install ultralytics==8.3.70 torch==2.5.0 torchvision==0.20.0 --no-cache-dir
 
 ```bash
 pip install ncnn spidev==3.8 rpi-lgpio==0.6 lgpio==0.2.2.0 \
-LoRaRF==1.4.0 pycryptodome
+LoRaRF==1.4.0 pycryptodome openpyxl
 ```
 
 ---
