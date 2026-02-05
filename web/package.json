@@ -1,5 +1,5 @@
 {
-  "name": "lora-pi-dashboard",
+  "name": "plant-disease-classification-dashboard",
   "version": "0.1.0",
   "private": true,
   "scripts": {

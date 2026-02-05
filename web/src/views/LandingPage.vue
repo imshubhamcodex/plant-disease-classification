@@ -93,6 +93,25 @@ export default {
       tooltip: "",
       tooltipX: 0,
       tooltipY: 0,
+
+      /* ================= DISEASE COLORS ================= */
+      diseaseColors: {},
+      colorPalette: [
+        "#ff4d4d",
+        "#ffa500",
+        "#8a2be2",
+        "#00bfff",
+        "#2ecc71",
+        "#f1c40f",
+        "#e67e22",
+        "#3498db",
+        "#e84393",
+        "#FF007F",
+        "#3498db",
+        "#2c3e50",
+        "#2980b9",
+      ],
+      nextColorIndex: 0,
     };
   },
 
@@ -440,22 +459,17 @@ export default {
           )
           .join("\n");
     },
+
     paintVisitedCell(cell) {
       const ctx = this.ctx;
-
-      const totalInfected = cell.diseases.reduce((s, d) => s + d.infected, 0);
-      const totalHealthy = cell.diseases.reduce((s, d) => s + d.healthy, 0);
-
-      let fillColor;
-      if (totalInfected > 0) fillColor = "#ff9d9d";
-      else if (totalHealthy > 0 || cell.diseases.length === 0)
-        fillColor = "#9dff9d";
-      else fillColor = "#f0f0f0";
-
       const x = cell.x * this.cellW;
       const y = this.h_w - (cell.y + 1) * this.cellH;
 
-      ctx.fillStyle = fillColor;
+      const diseaseName = cell.diseases?.length ? cell.diseases[0].name : null;
+
+      const color = diseaseName ? this.getDiseaseColor(diseaseName) : "green";
+
+      ctx.fillStyle = color;
       ctx.fillRect(x, y, this.cellW, this.cellH);
 
       ctx.strokeStyle = "#ddd";
@@ -505,6 +519,19 @@ export default {
       };
 
       requestAnimationFrame(animateIdle);
+    },
+
+    getDiseaseColor(diseaseName) {
+      if (!this.diseaseColors[diseaseName]) {
+        // assign next palette color
+        const color =
+          this.colorPalette[this.nextColorIndex % this.colorPalette.length];
+
+        this.diseaseColors[diseaseName] = color;
+        this.nextColorIndex++;
+      }
+
+      return this.diseaseColors[diseaseName];
     },
 
     sendTelegramMessage(text) {
