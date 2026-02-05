@@ -182,61 +182,91 @@ def fake_gps():
 # =========================================================
 # YOLO CLS
 # =========================================================
-def yolo_cls_infer(frame, prob_thresh=0.95, max_classes=5):
+def contains_leaf(frame, green_thresh=0.08):
+
+    b = frame[:,:,0].astype(float)
+    g = frame[:,:,1].astype(float)
+    r = frame[:,:,2].astype(float)
+
+    # Strong green dominance + brightness filter
+    green_mask = (
+        (g > r * 1.1) &
+        (g > b * 1.1) &
+        (g > 60)
+    )
+
+    green_ratio = green_mask.mean()
+
+    return green_ratio > green_thresh
+
+
+def yolo_cls_infer(frame, prob_thresh=0.95, max_classes=1):
+
+    if not contains_leaf(frame):
+        return []
+
     results = model.predict(frame, imgsz=INFERENCE_SIZE, verbose=False)
-    
+
     detections = []
     r = results[0]
-    
+
     if r.probs is None:
         return detections
 
     probs = r.probs.data.cpu().numpy()
     class_ids = probs.argsort()[::-1]
 
+    # Confidence gap rejection
+    if len(class_ids) > 1:
+        if probs[class_ids[0]] - probs[class_ids[1]] < 0.2:
+            return []
+
     h, w = frame.shape[:2]
     count = 0
 
     for cls_id in class_ids:
         conf = probs[cls_id]
+
         if conf < prob_thresh or count >= max_classes:
             break
 
         disease = r.names[int(cls_id)]
-        
-        grid_x = (count % 3) - 1     # -1, 0, +1
-        grid_y = (count // 3) - 1   # -1, 0, +1
 
-        # Grid-based offsets
-        x_offset = int(grid_x * w * 0.1)
-        y_offset = int(grid_y * h * 0.1)
+        # Get frame size
+        h, w = frame.shape[:2]
 
-        # Global LEFT shift (10% of width)
-        left_shift = int(w * 0.10)
+        # Define box size (50% of frame)
+        box_w = int(w * 0.7)
+        box_h = int(h * 0.7)
 
-        # Bigger ROI (50% of frame)
-        x1 = int(w * 0.15 + x_offset - left_shift)
-        y1 = int(h * 0.15 + y_offset)
-        x2 = int(w * 0.65 + x_offset - left_shift)
-        y2 = int(h * 0.65 + y_offset)
+        # Center position
+        cx = w // 2
+        cy = h // 2
 
-        # Clamp to image boundaries
+        # Bounding box coordinates
+        x1 = cx - box_w // 2
+        y1 = cy - box_h // 2
+        x2 = cx + box_w // 2
+        y2 = cy + box_h // 2
+
+        # Safety clamp
         x1 = max(0, x1)
         y1 = max(0, y1)
         x2 = min(w, x2)
         y2 = min(h, y2)
 
-        # Area and disease estimation
-        area = max(0, (x2 - x1) * (y2 - y1))
+        # Area calculation
+        area = (x2 - x1) * (y2 - y1)
+
         infected_px = area * conf
         healthy_px = area * (1 - conf)
 
-
         detections.append((disease, infected_px, healthy_px, conf, (x1, y1, x2, y2)))
-        print(f"[YOLO-CLS]: Classify {disease} ({conf:.2f})")
         count += 1
-
+        print(f"[YOLO-CLS]: Classify {disease} ({conf:.2f})")
+        
     return detections
+
 
 def yolo_infer(frame):
     return yolo_cls_infer(frame) if YOLO_CLS else []
