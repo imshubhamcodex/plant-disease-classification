@@ -182,7 +182,7 @@ def fake_gps():
 # =========================================================
 # YOLO CLS
 # =========================================================
-def contains_leaf(frame, green_thresh=0.08):
+def contains_leaf(frame, green_thresh=0.05):
 
     b = frame[:,:,0].astype(float)
     g = frame[:,:,1].astype(float)
@@ -218,7 +218,7 @@ def yolo_cls_infer(frame, prob_thresh=0.95, max_classes=1):
 
     # Confidence gap rejection
     if len(class_ids) > 1:
-        if probs[class_ids[0]] - probs[class_ids[1]] < 0.2:
+        if probs[class_ids[0]] - probs[class_ids[1]] < 0.35:
             return []
 
     h, w = frame.shape[:2]
