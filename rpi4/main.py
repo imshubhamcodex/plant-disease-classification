@@ -182,7 +182,7 @@ def fake_gps():
 # =========================================================
 # YOLO CLS
 # =========================================================
-def yolo_cls_infer(frame, prob_thresh=0.9, max_classes=5):
+def yolo_cls_infer(frame, prob_thresh=0.95, max_classes=5):
     results = model.predict(frame, imgsz=INFERENCE_SIZE, verbose=False)
     
     detections = []
@@ -211,25 +211,26 @@ def yolo_cls_infer(frame, prob_thresh=0.9, max_classes=5):
         x_offset = int(grid_x * w * 0.1)
         y_offset = int(grid_y * h * 0.1)
 
-        # Global right shift (5% of width)
-        right_shift = int(w * 0.05)
+        # Global LEFT shift (10% of width)
+        left_shift = int(w * 0.10)
 
-        # Larger ROI (40% of frame)
-        x1 = int(w * 0.20 + x_offset + right_shift)
-        y1 = int(h * 0.20 + y_offset)
-        x2 = int(w * 0.60 + x_offset + right_shift)
-        y2 = int(h * 0.60 + y_offset)
+        # Bigger ROI (50% of frame)
+        x1 = int(w * 0.15 + x_offset - left_shift)
+        y1 = int(h * 0.15 + y_offset)
+        x2 = int(w * 0.65 + x_offset - left_shift)
+        y2 = int(h * 0.65 + y_offset)
 
-        # Clamp to image boundaries (IMPORTANT)
+        # Clamp to image boundaries
         x1 = max(0, x1)
         y1 = max(0, y1)
         x2 = min(w, x2)
         y2 = min(h, y2)
 
-        # Area calculation
+        # Area and disease estimation
         area = max(0, (x2 - x1) * (y2 - y1))
         infected_px = area * conf
         healthy_px = area * (1 - conf)
+
 
         detections.append((disease, infected_px, healthy_px, conf, (x1, y1, x2, y2)))
         print(f"[YOLO-CLS]: Classify {disease} ({conf:.2f})")
@@ -427,19 +428,22 @@ try:
         
         detections = yolo_infer(frame)  # Detection
 
-        for disease, infected, healthy, conf, bbox in detections: # Create Dataset of current cell
+        for i, (disease, infected, healthy, conf, bbox) in enumerate(detections): # Create Dataset of current cell
             
             # Draw on cam feed
-            x1, y1, x2, y2 = bbox
+            # x1, y1, x2, y2 = bbox
             # Bounding box
-            cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 0, 255), 2)
+            # cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 0, 255), 2)
             # Label text
-            label = f"{disease} ({conf*100:.1f}%)"
+            # label = f"{disease} ({conf*100:.1f}%)"
             # Background for text
-            (tw, th), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
-            cv2.rectangle(frame, (x1, y1 - th - 6), (x1 + tw + 4, y1), (0, 0, 255), -1)
-            cv2.putText(frame, label, (x1 + 2, y1 - 4), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
-
+            # (tw, th), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
+            # cv2.rectangle(frame, (x1, y1 - th - 6), (x1 + tw + 4, y1), (0, 0, 255), -1)
+            # cv2.putText(frame, label, (x1 + 2, y1 - 4), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
+            
+            cv2.putText(frame, f"{disease} ({conf*100:.1f}%)", (10, 125 + i*20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
+        
+            
             # Noramal flow matching & updating leaf
             leaf_id, is_new_leaf = match_or_create_leaf(cell, bbox)
             update_grid(cell, leaf_id, disease, infected, healthy)
@@ -475,10 +479,10 @@ try:
         fps = 0.9 * fps + 0.1 * (1 / (now - prev_time))
         prev_time = now
 
-        cv2.putText(frame, f"FPS: {fps:.2f}", (10,30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0,255,0), 2)
+        cv2.putText(frame, f"FPS: {fps:.2f}", (10,35), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0,255,0), 2)
         
         cell_text = f"Cell: ({cell[0]}, {cell[1]})"
-        cv2.putText(frame, cell_text, (10, 65), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 0), 2)
+        cv2.putText(frame, cell_text, (10, 65), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 0, 0), 2)
     
         cv2.putText(frame, f"Number of Detections: {len(detections)}", (10, 95), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 255), 2)
         
