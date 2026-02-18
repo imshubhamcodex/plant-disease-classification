@@ -31,6 +31,7 @@ TX_INTERVAL = 6.0           # seconds (slightly > RX listen window)
 # GLOBAL STATE
 # =========================================================
 grid_data = {}               # Aggregated disease data per grid cell
+leaf_tracks = {}             # Active leaf tracks per cell
 current_cell = None          # Cell where drone currently resides
 leaf_id_counter = 0
 px_to_area_scale = 1000    # scale factor to convert pixel area to actual area
