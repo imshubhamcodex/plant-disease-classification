@@ -15,12 +15,12 @@ import RPi.GPIO as GPIO
 from openpyxl import Workbook, load_workbook
 
 
-os.environ["OMP_NUM_THREADS"] = "2"
-os.environ["OPENBLAS_NUM_THREADS"] = "2"
-os.environ["MKL_NUM_THREADS"] = "2"
-os.environ["NUMEXPR_NUM_THREADS"] = "2"
-os.environ["VECLIB_MAXIMUM_THREADS"] = "2"
-os.environ["NUMBA_NUM_THREADS"] = "2"
+os.environ["OMP_NUM_THREADS"] = "4"
+os.environ["OPENBLAS_NUM_THREADS"] = "4"
+os.environ["MKL_NUM_THREADS"] = "4"
+os.environ["NUMEXPR_NUM_THREADS"] = "4"
+os.environ["VECLIB_MAXIMUM_THREADS"] = "4"
+os.environ["NUMBA_NUM_THREADS"] = "4"
 
 
 
@@ -31,7 +31,7 @@ GPIO.setup(LED_PIN, GPIO.OUT)
 # =========================================================
 # INIT
 # =========================================================
-# yolo export model=best.pt format=ncnn imgsz=128
+# yolo export model=best.pt format=ncnn imgsz=320 half=True
 model = YOLO("best_ncnn_model", task="classify")
 
 # Lora Comm Init
@@ -182,28 +182,28 @@ def fake_gps():
 # =========================================================
 # YOLO CLS
 # =========================================================
-def contains_leaf(frame, green_thresh=0.05):
+# def contains_leaf(frame, green_thresh=0.05):
 
-    b = frame[:,:,0].astype(float)
-    g = frame[:,:,1].astype(float)
-    r = frame[:,:,2].astype(float)
+#     b = frame[:,:,0].astype(float)
+#     g = frame[:,:,1].astype(float)
+#     r = frame[:,:,2].astype(float)
 
-    # Strong green dominance + brightness filter
-    green_mask = (
-        (g > r * 1.1) &
-        (g > b * 1.1) &
-        (g > 60)
-    )
+#     # Strong green dominance + brightness filter
+#     green_mask = (
+#         (g > r * 1.1) &
+#         (g > b * 1.1) &
+#         (g > 60)
+#     )
 
-    green_ratio = green_mask.mean()
+#     green_ratio = green_mask.mean()
 
-    return green_ratio > green_thresh
+#     return green_ratio > green_thresh
 
 
-def yolo_cls_infer(frame, prob_thresh=0.95, max_classes=1):
+def yolo_cls_infer(frame, prob_thresh=0.90, max_classes=1):
 
-    if not contains_leaf(frame):
-        return []
+    # if not contains_leaf(frame):
+    #     return []
 
     results = model.predict(frame, imgsz=INFERENCE_SIZE, verbose=False)
 
@@ -213,13 +213,13 @@ def yolo_cls_infer(frame, prob_thresh=0.95, max_classes=1):
     if r.probs is None:
         return detections
 
-    probs = r.probs.data.cpu().numpy()
+    probs = r.probs.data.numpy()
     class_ids = probs.argsort()[::-1]
 
     # Confidence gap rejection
-    if len(class_ids) > 1:
-        if probs[class_ids[0]] - probs[class_ids[1]] < 0.35:
-            return []
+    # if len(class_ids) > 1:
+    #     if probs[class_ids[0]] - probs[class_ids[1]] < 0.35:
+    #         return []
 
     h, w = frame.shape[:2]
     count = 0

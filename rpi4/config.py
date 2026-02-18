@@ -23,7 +23,7 @@ DELTA_THRESH = 3.0           # % change threshold
 
 # Leaf deduplication thresholds
 IOU_THRESH = 0.5
-MAX_CENTER_DIST = 40         # pixels from two bounding boxes
+MAX_CENTER_DIST = 25         # pixels from two bounding boxes
 LEAF_TIMEOUT = 3.0           # for tracks clean up after seconds
 TX_INTERVAL = 6.0           # seconds (slightly > RX listen window)
 
@@ -31,7 +31,6 @@ TX_INTERVAL = 6.0           # seconds (slightly > RX listen window)
 # GLOBAL STATE
 # =========================================================
 grid_data = {}               # Aggregated disease data per grid cell
-leaf_tracks = {}             # Active leaf tracks per cell
 current_cell = None          # Cell where drone currently resides
 leaf_id_counter = 0
 px_to_area_scale = 1000    # scale factor to convert pixel area to actual area
@@ -48,7 +47,7 @@ GPS_UPDATE_INTERVAL = 5.0   # Spent 5 seconds in each grid cell
 # =========================================================
 WIDTH, HEIGHT = 640, 480
 FRAME_SIZE = int(WIDTH * HEIGHT * 1.5)
-INFERENCE_SIZE = 128  # imgsz=128 matches to this ->  # yolo export model=best.pt format=ncnn imgsz=128
+INFERENCE_SIZE = 320  # imgsz=128 matches to this ->  # yolo export model=best.pt format=ncnn imgsz=128
 
 # =========================================================
 # YOLO Classifier Model
