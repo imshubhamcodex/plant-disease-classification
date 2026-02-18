@@ -15,10 +15,10 @@ from openpyxl import Workbook, load_workbook
 
 
 # ================= CPU THREAD LIMIT =================
-os.environ["OMP_NUM_THREADS"] = "4"
-os.environ["OPENBLAS_NUM_THREADS"] = "4"
-os.environ["MKL_NUM_THREADS"] = "4"
-os.environ["NUMEXPR_NUM_THREADS"] = "4"
+# os.environ["OMP_NUM_THREADS"] = "4"
+# os.environ["OPENBLAS_NUM_THREADS"] = "4"
+# os.environ["MKL_NUM_THREADS"] = "4"
+# os.environ["NUMEXPR_NUM_THREADS"] = "4"
 
 
 # ================= GPIO =================
@@ -30,6 +30,8 @@ GPIO.setup(LED_PIN, GPIO.OUT)
 # ================= MODEL =================
 # model = YOLO("best_ncnn_model", task="classify")
 model = YOLO("best.onnx", task="classify")
+model.overrides["batch"] = 8
+model.overrides["device"] = "cpu"
 
 comm = LoRaComm()
 lora_tx_lock = Lock()
@@ -274,9 +276,8 @@ def tiled_classification(frame, tile_size=240, prob_thresh=0.75):
     # 🔥 IMPORTANT FIX: convert list -> numpy batch
     batch = np.stack(tiles, axis=0)
 
-    # NCNN prefers uint8 input
-    batch = batch.astype(np.uint8)
-
+    batch = np.stack(tiles, axis=0).astype(np.float32) / 255.0
+    
     # -------- Batched Inference --------
     results = model(batch, verbose=False)
 
