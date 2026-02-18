@@ -28,7 +28,8 @@ GPIO.setup(LED_PIN, GPIO.OUT)
 
 
 # ================= MODEL =================
-model = YOLO("best_ncnn_model", task="classify")
+# model = YOLO("best_ncnn_model", task="classify")
+model = YOLO("best.onnx", task="classify")
 
 comm = LoRaComm()
 lora_tx_lock = Lock()
