@@ -206,12 +206,19 @@ def gps_to_xy(lat, lon):
     y = EARTH_RADIUS * dlat
     return x, y
 
-
 def gps_to_grid(lat, lon):
     x, y = gps_to_xy(lat, lon)
     if x < 0 or y < 0 or x > FIELD_WIDTH_M or y > FIELD_HEIGHT_M:
         return (-1, -1)
     return int(x // CELL_W), int(y // CELL_H)
+
+
+def grid_to_gps(gx, gy):
+    x = (gx + 0.5) * CELL_W
+    y = (gy + 0.5) * CELL_H
+    lat = LAT0 + math.degrees(y / EARTH_RADIUS)
+    lon = LON0 + math.degrees(x / (EARTH_RADIUS * math.cos(math.radians(LAT0))))
+    return lat, lon
 
 
 # ================= TRANSMISSION =================
