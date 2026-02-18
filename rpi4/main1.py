@@ -152,33 +152,6 @@ grid_data = {}
 current_cell = None
 
 
-# ================= SIMPLE CLASSIFIER =================
-def yolo_cls_infer(frame, prob_thresh=0.80):
-
-    results = model.predict(frame, imgsz=INFERENCE_SIZE, verbose=False)
-
-    r = results[0]
-    if r.probs is None:
-        return None
-
-    probs = r.probs.data.numpy()
-    cls_id = probs.argmax()
-    conf = probs[cls_id]
-
-    if conf < prob_thresh:
-        return None
-
-    disease = r.names[int(cls_id)]
-
-    h, w = frame.shape[:2]
-    area = h * w
-
-    infected_px = area * conf
-    healthy_px = area * (1 - conf)
-
-    return disease, infected_px, healthy_px, conf
-
-
 # ================= GRID UPDATE =================
 def update_grid(cell, disease, infected_px, healthy_px):
 
@@ -195,7 +168,6 @@ def update_grid(cell, disease, infected_px, healthy_px):
 
     d["infected_area"] += infected_px
     d["healthy_area"] += healthy_px
-    d["frames"] += 1
 
 
 # ================= GPS HELPERS =================
@@ -271,6 +243,68 @@ def blink_led(times=1, duration=0.2):
         time.sleep(duration)
 
 
+# ================= By Parts classification =================
+def tiled_classification(frame, tile_size=240, prob_thresh=0.75):
+    h, w = frame.shape[:2]
+
+    tiles = []
+    tile_meta = []   # stores real area of each tile
+
+    # ---------------- Collect Tiles ----------------
+    for y in range(0, h, tile_size):
+        for x in range(0, w, tile_size):
+
+            tile = frame[y:y+tile_size, x:x+tile_size]
+
+            if tile.size == 0:
+                continue
+
+            tile_h, tile_w = tile.shape[:2]
+            real_area = tile_h * tile_w
+
+            tile_resized = cv2.resize(tile, (INFERENCE_SIZE, INFERENCE_SIZE))
+
+            tiles.append(tile_resized)
+            tile_meta.append(real_area)
+
+    if not tiles:
+        return {}
+
+    # ---------------- Single Batched Inference ----------------
+    results = model.predict(tiles, imgsz=INFERENCE_SIZE, verbose=False)
+
+    disease_stats = {}
+
+    # ---------------- Process Results ----------------
+    for i, r in enumerate(results):
+
+        if r.probs is None:
+            continue
+
+        conf = r.probs.top1conf.item()
+        cls_id = r.probs.top1
+
+        if conf < prob_thresh:
+            continue
+
+        disease = r.names[int(cls_id)]
+        real_area = tile_meta[i]
+
+        infected_px = real_area * conf
+        healthy_px = real_area * (1 - conf)
+
+        d = disease_stats.setdefault(disease, {
+            "infected_area": 0,
+            "healthy_area": 0,
+            "frames": 0
+        })
+
+        d["infected_area"] += infected_px
+        d["healthy_area"] += healthy_px
+
+    return disease_stats
+
+
 # ================= MAIN LOOP =================
 print("\n=== Drone Disease Classification Started ===\n")
 
@@ -295,14 +329,21 @@ try:
             continue
 
         # ----- INFERENCE -----
-        result = yolo_cls_infer(frame)
+        y_offset = 120
+        
+        diseases = tiled_classification(frame)
+        
+        for disease, stats in diseases.items():
+            update_grid(cell, disease, stats["infected_area"], stats["healthy_area"])
+            
+            total_area = stats["infected_area"] + stats["healthy_area"]
+            if total_area > 0:
+                avg_conf = stats["infected_area"] / total_area
 
-        if result:
-            disease, infected, healthy, conf = result
-            update_grid(cell, disease, infected, healthy)
+                cv2.putText(frame, f"{disease} ({avg_conf*100:.1f}%)", (10, y_offset), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
+                y_offset += 25
 
-            cv2.putText(frame, f"{disease} ({conf*100:.1f}%)", (10, 120), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
-
+   
         # ----- CELL TRANSITION -----
         if current_cell is None:
             current_cell = cell
