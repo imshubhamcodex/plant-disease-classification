@@ -248,9 +248,9 @@ def tiled_classification(frame, tile_size=240, prob_thresh=0.75):
     h, w = frame.shape[:2]
 
     tiles = []
-    tile_meta = []   # stores real area of each tile
+    tile_meta = []
 
-    # ---------------- Collect Tiles ----------------
+    # -------- Collect Tiles --------
     for y in range(0, h, tile_size):
         for x in range(0, w, tile_size):
 
@@ -270,24 +270,30 @@ def tiled_classification(frame, tile_size=240, prob_thresh=0.75):
     if not tiles:
         return {}
 
-    # ---------------- Single Batched Inference ----------------
-    results = model.predict(tiles, imgsz=INFERENCE_SIZE, verbose=False)
+    # 🔥 IMPORTANT FIX: convert list -> numpy batch
+    batch = np.stack(tiles, axis=0)
+
+    # NCNN prefers uint8 input
+    batch = batch.astype(np.uint8)
+
+    # -------- Batched Inference --------
+    results = model(batch, verbose=False)
 
     disease_stats = {}
 
-    # ---------------- Process Results ----------------
+    # -------- Process Results --------
     for i, r in enumerate(results):
 
         if r.probs is None:
             continue
 
-        conf = r.probs.top1conf.item()
-        cls_id = r.probs.top1
+        conf = float(r.probs.top1conf)
+        cls_id = int(r.probs.top1)
 
         if conf < prob_thresh:
             continue
 
-        disease = r.names[int(cls_id)]
+        disease = r.names[cls_id]
         real_area = tile_meta[i]
 
         infected_px = real_area * conf
@@ -303,6 +309,7 @@ def tiled_classification(frame, tile_size=240, prob_thresh=0.75):
         d["healthy_area"] += healthy_px
 
     return disease_stats
+
 
 
 # ================= MAIN LOOP =================
