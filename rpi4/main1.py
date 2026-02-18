@@ -153,7 +153,7 @@ current_cell = None
 
 
 # ================= SIMPLE CLASSIFIER =================
-def yolo_cls_infer(frame, prob_thresh=0.90):
+def yolo_cls_infer(frame, prob_thresh=0.80):
 
     results = model.predict(frame, imgsz=INFERENCE_SIZE, verbose=False)
 
