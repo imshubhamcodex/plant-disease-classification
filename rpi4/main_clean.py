@@ -183,29 +183,41 @@ def grid_to_gps(gx, gy):
 
 
 # ======================= YOLO CLS==================================
-def yolo_cls_infer(frame, prob_thresh=0.80):
+def yolo_cls_infer(frame, prob_thresh=0.80, topk=3):
+
     results = model.predict(frame, imgsz=INFERENCE_SIZE, verbose=False)
     r = results[0]
-    
+
     if r.probs is None:
         return []
 
-    probs = r.probs.data.numpy()
-    cls_id = probs.argmax()
-    conf = probs[cls_id]
+    probs = r.probs.data.cpu().numpy()
 
-    if conf < prob_thresh:
-        return []
-
-    disease = r.names[int(cls_id)]
+    # -------- TOP K CLASSES --------
+    top_ids = probs.argsort()[-topk:][::-1]
 
     h, w = frame.shape[:2]
     area = h * w
 
-    infected_px = area * conf
-    healthy_px = area * (1 - conf)
+    detections = []
 
-    return [(disease, infected_px, healthy_px, conf)]
+    for cls_id in top_ids:
+
+        conf = probs[cls_id]
+
+        # skip low confidence
+        if conf < prob_thresh:
+            continue
+
+        disease = r.names[int(cls_id)]
+
+        infected_px = area * conf
+        healthy_px = area * (1 - conf)
+
+        detections.append((disease, infected_px, healthy_px, conf))
+
+    return detections
+
 
 
 # ========================== GRID UPDATE ==========================
@@ -319,8 +331,9 @@ try:
 
         for i, (disease, infected, healthy, conf) in enumerate(detections): # Create Dataset of current cell
             
-            cv2.putText(frame, f"{disease} ({conf*100:.1f}%)", (10, 125 + i*20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 2)
-        
+            cv2.putText(frame, f"Top{i+1}: {disease} ({conf*100:.1f}%)",(10, 125 + i*25),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0,0,255), 2)
+            
             # Noramal flow matching & updating leaf
             update_grid(cell, disease, infected, healthy)
         # ==================================================================
