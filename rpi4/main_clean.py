@@ -189,20 +189,17 @@ def zoom_frame(frame, zoom_factor=3.0):
 
     h, w = frame.shape[:2]
 
-    # crop size
-    new_w = int(w / zoom_factor)
-    new_h = int(h / zoom_factor)
+    # Center of image
+    cx = w // 2
+    cy = h // 2
 
-    # center crop
-    x1 = (w - new_w) // 2
-    y1 = (h - new_h) // 2
+    # Scaling matrix
+    M = cv2.getRotationMatrix2D((cx, cy), 0, zoom_factor)
 
-    cropped = frame[y1:y1 + new_h, x1:x1 + new_w]
-
-    # resize back to original size
-    zoomed = cv2.resize(cropped,(w, h),interpolation=cv2.INTER_LINEAR)
+    zoomed = cv2.warpAffine(frame, M, (w, h), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
 
     return zoomed
+
 
 
 
