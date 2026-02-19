@@ -280,38 +280,47 @@ def blink_led(times=1, duration=0.2):
 def tiled_classification(frame, tile_size=320, stride=160, prob_thresh=0.80):
 
     h, w = frame.shape[:2]
+    tiles = []
     disease_stats = {}
 
-    for y in range(0, h, stride):
-        for x in range(0, w, stride):
+    for y in range(0, h - tile_size + 1, stride):
+        for x in range(0, w - tile_size + 1, stride):
 
-            y_end = min(y + tile_size, h)
-            x_end = min(x + tile_size, w)
+            tile = frame[y:y+tile_size, x:x+tile_size]
+            tiles.append(tile)
 
-            tile = frame[y:y_end, x:x_end]
+    if not tiles:
+        return disease_stats
 
-            if tile.shape[0] != tile_size or tile.shape[1] != tile_size:
-                continue
+    results = model(tiles, verbose=False)
 
-    
-            result = yolo_cls_infer(tile, prob_thresh)
-            if not result:
-                continue
+    for r in results:
 
-            disease, _, _, conf = result
-            area = tile_size * tile_size
+        if r.probs is None:
+            continue
 
-            d = disease_stats.setdefault(disease, {
-                "infected_area": 0,
-                "healthy_area": 0,
-                "frames": 0
-            })
+        probs = r.probs.data.numpy()
+        cls_id = probs.argmax()
+        conf = probs[cls_id]
 
-            d["infected_area"] += area * conf
-            d["healthy_area"] += area * (1 - conf)
-            d["frames"] += 1
+        if conf < prob_thresh:
+            continue
+
+        disease = r.names[int(cls_id)]
+        area = tile_size * tile_size
+
+        d = disease_stats.setdefault(disease, {
+            "infected_area": 0,
+            "healthy_area": 0,
+            "frames": 0
+        })
+
+        d["infected_area"] += area * conf
+        d["healthy_area"] += area * (1 - conf)
+        d["frames"] += 1
 
     return disease_stats
+
 
 
 
