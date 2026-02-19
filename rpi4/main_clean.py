@@ -183,7 +183,7 @@ def grid_to_gps(gx, gy):
 
 
 # ======================= YOLO CLS==================================
-def yolo_cls_infer(frame, prob_thresh=0.80, topk=3):
+def yolo_cls_infer(frame, prob_thresh=0.50, topk=3):
 
     results = model.predict(frame, imgsz=INFERENCE_SIZE, verbose=False)
     r = results[0]
