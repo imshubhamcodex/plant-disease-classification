@@ -181,11 +181,39 @@ def grid_to_gps(gx, gy):
     lon = LON0 + math.degrees(x / (EARTH_RADIUS * math.cos(math.radians(LAT0))))
     return lat, lon
 
+# ===================== DIGITAL ZOOM =====================
+def zoom_frame(frame, zoom_factor=3.0):
+
+    if zoom_factor <= 1.0:
+        return frame
+
+    h, w = frame.shape[:2]
+
+    # crop size
+    new_w = int(w / zoom_factor)
+    new_h = int(h / zoom_factor)
+
+    # center crop
+    x1 = (w - new_w) // 2
+    y1 = (h - new_h) // 2
+
+    cropped = frame[y1:y1 + new_h, x1:x1 + new_w]
+
+    # resize back to original size
+    zoomed = cv2.resize(cropped,(w, h),interpolation=cv2.INTER_LINEAR)
+
+    return zoomed
+
+
 
 # ======================= YOLO CLS==================================
 def yolo_cls_infer(frame, prob_thresh=0.50, topk=3):
 
-    results = model.predict(frame, imgsz=INFERENCE_SIZE, verbose=False)
+    # ---------- 300% Zoom ----------
+    zoomed_frame = zoom_frame(frame, zoom_factor=3.0)
+    results = model.predict(zoomed_frame, imgsz=INFERENCE_SIZE, verbose=False)
+    
+    # results = model.predict(frame, imgsz=INFERENCE_SIZE, verbose=False)
     r = results[0]
 
     if r.probs is None:
