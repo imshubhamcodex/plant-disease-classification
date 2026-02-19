@@ -292,7 +292,11 @@ def tiled_classification(frame, tile_size=320, stride=160, prob_thresh=0.80):
     if not tiles:
         return disease_stats
 
-    results = model(tiles, verbose=False)
+    results = []
+
+    for tile in tiles:
+        r = model(tile, verbose=False)[0]
+        results.append(r)
 
     for r in results:
 
