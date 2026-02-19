@@ -206,8 +206,8 @@ def yolo_cls_infer(frame, prob_thresh=0.50, topk=3):
         conf = probs[cls_id]
 
         # skip low confidence
-        if conf < prob_thresh:
-            continue
+        # if conf < prob_thresh:
+        #     continue
 
         disease = r.names[int(cls_id)]
 
