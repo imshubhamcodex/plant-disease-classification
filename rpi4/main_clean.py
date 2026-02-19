@@ -254,7 +254,7 @@ def save_grid(cell, data):
 
     if data["diseases"]:
         for disease, s in data["diseases"].items():
-            payload += f" | {disease} : {int(s['infected_area']/px_to_area_scale)} : {int(s['healthy_area']/px_to_area_scale)} : {s['leaves']}"
+            payload += f" | {disease} : {int(s['infected_area']/px_to_area_scale)} : {int(s['healthy_area']/px_to_area_scale)} : {s['frames']}"
     else:
         payload += " | NO DATA"
         
