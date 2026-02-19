@@ -15,10 +15,10 @@ from openpyxl import Workbook, load_workbook
 
 
 # ================= CPU THREAD LIMIT =================
-# os.environ["OMP_NUM_THREADS"] = "4"
-# os.environ["OPENBLAS_NUM_THREADS"] = "4"
-# os.environ["MKL_NUM_THREADS"] = "4"
-# os.environ["NUMEXPR_NUM_THREADS"] = "4"
+os.environ["OMP_NUM_THREADS"] = "4"
+os.environ["OPENBLAS_NUM_THREADS"] = "4"
+os.environ["MKL_NUM_THREADS"] = "4"
+os.environ["NUMEXPR_NUM_THREADS"] = "4"
 
 
 # ================= GPIO =================
@@ -26,12 +26,13 @@ LED_PIN = 24
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(LED_PIN, GPIO.OUT)
 
+# ================= Frame Skiping =================
+FRAME_SKIP = 2
+frame_counter = 0
+
 
 # ================= MODEL =================
-# model = YOLO("best_ncnn_model", task="classify")
-model = YOLO("best.onnx", task="classify")
-model.overrides["batch"] = 8
-model.overrides["device"] = "cpu"
+model = YOLO("best_ncnn_model", task="classify")
 
 comm = LoRaComm()
 lora_tx_lock = Lock()
@@ -155,6 +156,34 @@ grid_data = {}
 current_cell = None
 
 
+# ================= SIMPLE CLASSIFIER =================
+def yolo_cls_infer(frame, prob_thresh=0.80):
+
+    # results = model.predict(frame, imgsz=INFERENCE_SIZE, verbose=False)
+    results = model(frame, verbose=False)
+
+    r = results[0]
+    if r.probs is None:
+        return None
+
+    probs = r.probs.data.numpy()
+    cls_id = probs.argmax()
+    conf = probs[cls_id]
+
+    if conf < prob_thresh:
+        return None
+
+    disease = r.names[int(cls_id)]
+
+    h, w = frame.shape[:2]
+    area = h * w
+
+    infected_px = area * conf
+    healthy_px = area * (1 - conf)
+
+    return disease, infected_px, healthy_px, conf
+
+
 # ================= GRID UPDATE =================
 def update_grid(cell, disease, infected_px, healthy_px):
 
@@ -171,6 +200,7 @@ def update_grid(cell, disease, infected_px, healthy_px):
 
     d["infected_area"] += infected_px
     d["healthy_area"] += healthy_px
+    d["frames"] += 1
 
 
 # ================= GPS HELPERS =================
@@ -247,70 +277,42 @@ def blink_led(times=1, duration=0.2):
 
 
 # ================= By Parts classification =================
-def tiled_classification(frame, tile_size=240, prob_thresh=0.75):
+def tiled_classification(frame, tile_size=320, stride=160, prob_thresh=0.80):
+
     h, w = frame.shape[:2]
-
-    tiles = []
-    tile_meta = []
-
-    # -------- Collect Tiles --------
-    for y in range(0, h, tile_size):
-        for x in range(0, w, tile_size):
-
-            tile = frame[y:y+tile_size, x:x+tile_size]
-
-            if tile.size == 0:
-                continue
-
-            tile_h, tile_w = tile.shape[:2]
-            real_area = tile_h * tile_w
-
-            tile_resized = cv2.resize(tile, (INFERENCE_SIZE, INFERENCE_SIZE))
-
-            tiles.append(tile_resized)
-            tile_meta.append(real_area)
-
-    if not tiles:
-        return {}
-
-    # 🔥 IMPORTANT FIX: convert list -> numpy batch
-    batch = np.stack(tiles, axis=0)
-
-    batch = np.stack(tiles, axis=0).astype(np.float32) / 255.0
-    
-    # -------- Batched Inference --------
-    results = model(batch, verbose=False)
-
     disease_stats = {}
 
-    # -------- Process Results --------
-    for i, r in enumerate(results):
+    for y in range(0, h, stride):
+        for x in range(0, w, stride):
 
-        if r.probs is None:
-            continue
+            y_end = min(y + tile_size, h)
+            x_end = min(x + tile_size, w)
 
-        conf = float(r.probs.top1conf)
-        cls_id = int(r.probs.top1)
+            tile = frame[y:y_end, x:x_end]
 
-        if conf < prob_thresh:
-            continue
+            if tile.shape[0] != tile_size or tile.shape[1] != tile_size:
+                continue
 
-        disease = r.names[cls_id]
-        real_area = tile_meta[i]
+    
+            result = yolo_cls_infer(tile, prob_thresh)
+            if not result:
+                continue
 
-        infected_px = real_area * conf
-        healthy_px = real_area * (1 - conf)
+            disease, _, _, conf = result
+            area = tile_size * tile_size
 
-        d = disease_stats.setdefault(disease, {
-            "infected_area": 0,
-            "healthy_area": 0,
-            "frames": 0
-        })
+            d = disease_stats.setdefault(disease, {
+                "infected_area": 0,
+                "healthy_area": 0,
+                "frames": 0
+            })
 
-        d["infected_area"] += infected_px
-        d["healthy_area"] += healthy_px
+            d["infected_area"] += area * conf
+            d["healthy_area"] += area * (1 - conf)
+            d["frames"] += 1
 
     return disease_stats
+
 
 
 
@@ -340,7 +342,12 @@ try:
         # ----- INFERENCE -----
         y_offset = 120
         
-        diseases = tiled_classification(frame)
+        frame_counter += 1
+        
+        if frame_counter % FRAME_SKIP == 0:
+            diseases = tiled_classification(frame)
+        else:
+            diseases = {}
         
         for disease, stats in diseases.items():
             update_grid(cell, disease, stats["infected_area"], stats["healthy_area"])
@@ -364,15 +371,17 @@ try:
             )
 
             save_grid(current_cell, data)
-            log_cell_to_excel(current_cell, data)
+            # log_cell_to_excel(current_cell, data)
 
-            threading.Thread(target=blink_led, args=(2,), daemon=True).start()
+            blink_led(2)
 
             current_cell = cell
 
         # ----- FPS -----
         now = time.time()
-        fps = 0.9 * fps + 0.1 * (1 / (now - prev_time))
+        dt = now - prev_time
+        if dt > 0:
+            fps = 0.9 * fps + 0.1 * (1 / dt)
         prev_time = now
 
         cv2.putText(frame, f"FPS:{fps:.2f}", (10, 35), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0,255,0), 2)
@@ -388,3 +397,8 @@ finally:
     GPIO.output(LED_PIN, GPIO.LOW)
     GPIO.cleanup()
     cv2.destroyAllWindows()
+    if LIVE_STREAM:
+        stop_event.set()
+        cam_proc.terminate()
+    else:
+        cap.release()
