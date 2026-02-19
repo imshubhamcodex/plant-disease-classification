@@ -43,11 +43,11 @@ tx_buffer = []
 last_tx_time = 0
 
 # FPS Calculation
-prev_time = time.time()
-fps = 0.0
 FRAME_SKIP = 2
 frame_counter = 0
-
+fps = 0
+fps_counter = 0
+fps_timer = time.time()
 
 # ============================== DATA LOG INIT ========================
 EXCEL_PATH = "plant_data.xlsx"  # Excel file path
@@ -343,7 +343,6 @@ try:
             # log_cell_to_excel(current_cell, data)
             
             # Blink LED parallel
-            # blink_led(2)
             threading.Thread(target=blink_led,args=(2,),daemon=True).start()
         
             current_cell = cell
@@ -351,13 +350,14 @@ try:
         
         
         # ================= FPS ==============================================
+        fps_counter += 1
         now = time.time()
-        dt = now - prev_time
 
-        if dt > 0:
-            fps = 1.0 / dt
+        if now - fps_timer >= 1.0:   # update every 1 sec
+            fps = fps_counter / (now - fps_timer)
+            fps_counter = 0
+            fps_timer = now
 
-        prev_time = now
 
         cv2.putText(frame, f"FPS: {fps:.2f}", (10,35), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0,255,0), 2)
         
