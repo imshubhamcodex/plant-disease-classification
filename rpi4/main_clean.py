@@ -43,11 +43,9 @@ tx_buffer = []
 last_tx_time = 0
 
 # FPS Calculation
-FRAME_SKIP = 2
-frame_counter = 0
-fps = 0
 fps_counter = 0
-fps_timer = time.time()
+start_time = time.time()
+
 
 # ============================== DATA LOG INIT ========================
 EXCEL_PATH = "plant_data.xlsx"  # Excel file path
@@ -347,13 +345,8 @@ try:
         
         
         # ========================= YOLO CLS =============================
-        frame_counter += 1
-        
-        if frame_counter % FRAME_SKIP == 0:
-            detections = yolo_cls_infer(frame)
-        else:
-            detections = []
-
+        detections = yolo_cls_infer(frame)
+       
         for i, (disease, infected, healthy, conf) in enumerate(detections): # Create Dataset of current cell
             
             cv2.putText(frame, f"Top{i+1}: {disease} ({conf*100:.1f}%)",(10, 125 + i*25),
@@ -388,13 +381,9 @@ try:
         
         
         # ================= FPS ==============================================
-        fps_counter += 1
-        now = time.time()
-
-        if now - fps_timer >= 1.0:   # update every 1 sec
-            fps = fps_counter / (now - fps_timer)
-            fps_counter = 0
-            fps_timer = now
+        frame_count += 1
+        elapsed_time = time.time() - start_time
+        fps = frame_count / elapsed_time if elapsed_time > 0 else 0
 
 
         cv2.putText(frame, f"FPS: {fps:.2f}", (10,35), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0,255,0), 2)
