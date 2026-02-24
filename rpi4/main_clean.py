@@ -187,14 +187,21 @@ def zoom_frame(frame, zoom_factor=3.0):
 
     h, w = frame.shape[:2]
 
-    # Center of image
-    cx = w // 2
-    cy = h // 2
+    # crop size
+    new_w = int(w / zoom_factor)
+    new_h = int(h / zoom_factor)
 
-    # Scaling matrix
-    M = cv2.getRotationMatrix2D((cx, cy), 0, zoom_factor)
+    x1 = (w - new_w) // 2
+    y1 = (h - new_h) // 2
 
-    zoomed = cv2.warpAffine(frame, M, (w, h), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
+    cropped = frame[y1:y1 + new_h, x1:x1 + new_w]
+
+    # UPSAMPLE (important)
+    zoomed = cv2.resize(
+        cropped,
+        (w, h),
+        interpolation=cv2.INTER_CUBIC
+    )
 
     return zoomed
 
@@ -205,7 +212,7 @@ def zoom_frame(frame, zoom_factor=3.0):
 def yolo_cls_infer(frame, prob_thresh=0.50, topk=3):
 
     # ---------- 300% Zoom ----------
-    zoomed_frame = zoom_frame(frame, zoom_factor=10.0)
+    zoomed_frame = zoom_frame(frame, zoom_factor=3.0)
     results = model.predict(zoomed_frame, imgsz=INFERENCE_SIZE, verbose=False)
     
     # results = model.predict(frame, imgsz=INFERENCE_SIZE, verbose=False)
