@@ -381,9 +381,9 @@ try:
         
         
         # ================= FPS ==============================================
-        frame_count += 1
+        fps_counter += 1
         elapsed_time = time.time() - start_time
-        fps = frame_count / elapsed_time if elapsed_time > 0 else 0
+        fps = fps_counter / elapsed_time if elapsed_time > 0 else 0
 
 
         cv2.putText(frame, f"FPS: {fps:.2f}", (10,35), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0,255,0), 2)
