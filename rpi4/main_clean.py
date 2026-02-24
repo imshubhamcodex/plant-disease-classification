@@ -205,7 +205,7 @@ def zoom_frame(frame, zoom_factor=3.0):
 def yolo_cls_infer(frame, prob_thresh=0.50, topk=3):
 
     # ---------- 300% Zoom ----------
-    zoomed_frame = zoom_frame(frame, zoom_factor=3.0)
+    zoomed_frame = zoom_frame(frame, zoom_factor=10.0)
     results = model.predict(zoomed_frame, imgsz=INFERENCE_SIZE, verbose=False)
     
     # results = model.predict(frame, imgsz=INFERENCE_SIZE, verbose=False)
