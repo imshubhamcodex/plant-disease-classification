@@ -48,7 +48,7 @@ GPS_UPDATE_INTERVAL = 3.0   # Spent 5 seconds in each grid cell
 # =========================================================
 WIDTH, HEIGHT = 640, 480
 FRAME_SIZE = int(WIDTH * HEIGHT * 1.5)
-INFERENCE_SIZE = 640  # imgsz=128 matches to this ->  # yolo export model=best.pt format=ncnn imgsz=128
+INFERENCE_SIZE = 768  # imgsz=128 matches to this ->  # yolo export model=best.pt format=ncnn imgsz=128
 
 # =========================================================
 # YOLO Classifier Model
