@@ -30,7 +30,7 @@ MSG_ID = 1
 # =========================================================
 drone_lat = LAT0
 drone_lon = LON0
-GPS_UPDATE_INTERVAL = 2.0   # Spent 2 seconds in each grid cell
+GPS_UPDATE_INTERVAL = 5.0   # Spent 2 seconds in each grid cell
 
 # =========================================================
 # CAMERA CONFIG
