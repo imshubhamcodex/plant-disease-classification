@@ -181,7 +181,7 @@ def grid_to_gps(gx, gy):
 
 
 # ======================= YOLO CLS==================================
-def yolo_cls_infer(frame, prob_thresh=0.40, topk=1):
+def yolo_cls_infer(frame, prob_thresh=0.50, topk=2):
 
     results = model.predict(frame, imgsz=INFERENCE_SIZE, verbose=False)
     r = results[0]
@@ -245,27 +245,24 @@ last_tx_time = 0
 last_tx_duration = 0   # store duration of previous TX
 
 def estimate_tx_interval(payload_len):
-    airtime = 0.05 * payload_len * 2   # rough LoRa scaling (depends on SF/BW)
+    airtime = 0.05 * payload_len   # rough LoRa scaling (depends on SF/BW)
     decrypt_time = 0.002 * payload_len
     return airtime + decrypt_time + 0.5   # margin
 
 def get_payload_chunk():
     global tx_buffer
-    # combine all buffered data
-    data = "".join(tx_buffer)
 
-    # take fixed-size chunk
-    chunk = data[:MAX_PAYLOAD]
+    chunk = ""
+    new_buffer = []
 
-    # keep remaining data
-    remaining = data[MAX_PAYLOAD:]
+    for line in tx_buffer:
+        # if adding this line exceeds limit → stop
+        if len(chunk) + len(line) > MAX_PAYLOAD:
+            new_buffer.append(line)   # keep for next round
+        else:
+            chunk += line
 
-    # reset buffer
-    tx_buffer.clear()
-
-    if remaining:
-        tx_buffer.append(remaining)
-
+    tx_buffer = new_buffer
     return chunk
 
 def try_transmit():
@@ -291,7 +288,7 @@ def try_transmit():
             last_tx_time = now
             last_tx_duration = next_duration   # store for next cycle
 
-            print(f"[TX]: SENT CHUNK | size={len(final_payload)} | wait={next_duration:.2f}sec\n")
+            print(f"[TX]: SENT | next wait = {next_duration:.2f}sec\n")
 
 
 # ========================== Data Buffer ===============================
