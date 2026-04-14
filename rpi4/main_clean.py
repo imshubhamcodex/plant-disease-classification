@@ -185,7 +185,10 @@ def yolo_cls_infer(frame, prob_thresh=0.50, topk=3):
 
     results = model.predict(frame, imgsz=INFERENCE_SIZE, verbose=False)
     r = results[0]
-
+    
+    speed = r.speed
+    print(f"Inference Time:   {speed['inference']:.2f}ms")
+    
     if r.probs is None:
         return []
 

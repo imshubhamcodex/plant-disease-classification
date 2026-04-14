@@ -25,7 +25,7 @@ DELTA_THRESH = 3.0           # % change threshold
 IOU_THRESH = 0.5
 MAX_CENTER_DIST = 25         # pixels from two bounding boxes
 LEAF_TIMEOUT = 3.0           # for tracks clean up after seconds
-TX_INTERVAL = 6.0           # seconds (slightly > RX listen window)
+TX_INTERVAL = 5.0           # seconds (slightly > RX listen window)
 
 # =========================================================
 # GLOBAL STATE
@@ -42,7 +42,7 @@ MSG_ID = 1
 # =========================================================
 drone_lat = LAT0
 drone_lon = LON0
-GPS_UPDATE_INTERVAL = 3.0   # Spent 5 seconds in each grid cell
+GPS_UPDATE_INTERVAL = 5.0   # Spent 3 seconds in each grid cell
 # =========================================================
 # CAMERA CONFIG
 # =========================================================
