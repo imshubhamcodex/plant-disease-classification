@@ -57,8 +57,8 @@ export default {
 
       /* ================= CANVAS / GRID ================= */
       h_w: 800,
-      gridRows: 20,
-      gridCols: 20,
+      gridRows: 10,
+      gridCols: 10,
       cellW: 0,
       cellH: 0,
       ctx: null,
