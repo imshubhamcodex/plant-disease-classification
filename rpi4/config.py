@@ -2,8 +2,8 @@
 # CONFIGURATION
 # =========================================================
 # Grid definition (100m x 100m field, 1m x 1m cells)
-GRID_ROWS = 20
-GRID_COLS = 20
+GRID_ROWS = 10
+GRID_COLS = 10
 FIELD_WIDTH_M = 100.0
 FIELD_HEIGHT_M = 100.0
 
