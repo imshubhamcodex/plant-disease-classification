@@ -164,7 +164,7 @@ scp SX127x.py /home/rpi4/YOLO/venv/lib/python3.11/site-packages/LoRaRF/SX127x.py
 ### Step 13.4: Export YOLO Model to NCNN
 
 ```bash
-yolo export model=best.pt format=ncnn imgsz=256
+yolo export model=best.pt format=ncnn imgsz=320
 ```
 
 > **Note:** `imgsz=128` must match `INFERENCE_SIZE` in the code.

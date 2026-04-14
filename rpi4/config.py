@@ -16,33 +16,22 @@ EARTH_RADIUS = 6378137
 # Bottom-left GPS reference of the field
 LAT0 = 22.572300
 LON0 = 88.431200
-
-# Transmission control
-# SEND_INTERVAL = 1.0        # flush data after seconds
-DELTA_THRESH = 3.0           # % change threshold
-
-# Leaf deduplication thresholds
-IOU_THRESH = 0.5
-MAX_CENTER_DIST = 25         # pixels from two bounding boxes
-LEAF_TIMEOUT = 3.0           # for tracks clean up after seconds
-TX_INTERVAL = 5.0           # seconds (slightly > RX listen window)
-
 # =========================================================
 # GLOBAL STATE
 # =========================================================
 grid_data = {}               # Aggregated disease data per grid cell
-leaf_tracks = {}             # Active leaf tracks per cell
 current_cell = None          # Cell where drone currently resides
-leaf_id_counter = 0
 px_to_area_scale = 1000    # scale factor to convert pixel area to actual area
 gps_scale = 100000           # scale factor to convert GPS coordinates
 MSG_ID = 1
+
 # =========================================================
 # GPS SIMULATION
 # =========================================================
 drone_lat = LAT0
 drone_lon = LON0
-GPS_UPDATE_INTERVAL = 5.0   # Spent 3 seconds in each grid cell
+GPS_UPDATE_INTERVAL = 2.0   # Spent 2 seconds in each grid cell
+
 # =========================================================
 # CAMERA CONFIG
 # =========================================================
