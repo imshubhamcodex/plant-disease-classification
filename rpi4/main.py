@@ -181,7 +181,7 @@ def grid_to_gps(gx, gy):
 
 
 # ======================= YOLO CLS==================================
-def yolo_cls_infer(frame, prob_thresh=0.50, topk=2):
+def yolo_cls_infer(frame, prob_thresh=0.40, topk=1):
 
     results = model.predict(frame, imgsz=INFERENCE_SIZE, verbose=False)
     r = results[0]
@@ -241,23 +241,6 @@ def update_grid(cell, disease, infected_px, healthy_px):
 
 
 # ========================== TRANSMISSION ===============================
-# def try_transmit():
-#     global last_tx_time, tx_buffer
-
-#     if not tx_buffer:
-#         return
-
-#     now = time.time()
-#     if now - last_tx_time > TX_INTERVAL:   # Send every TX_INTERVAL seconds
-#         final_payload = "".join(tx_buffer)
-        
-#         with lora_tx_lock:
-#             comm.encrypt_and_send(final_payload)
-#             tx_buffer.clear()
-#             last_tx_time = now
-#             print("[TX]: SENT TO BASE\n")
-
-
 last_tx_time = 0
 last_tx_duration = 0   # store duration of previous TX
 
@@ -265,6 +248,25 @@ def estimate_tx_interval(payload_len):
     airtime = 0.05 * payload_len   # rough LoRa scaling (depends on SF/BW)
     decrypt_time = 0.002 * payload_len
     return airtime + decrypt_time + 0.5   # margin
+
+def get_payload_chunk():
+    global tx_buffer
+    # combine all buffered data
+    data = "".join(tx_buffer)
+
+    # take fixed-size chunk
+    chunk = data[:MAX_PAYLOAD]
+
+    # keep remaining data
+    remaining = data[MAX_PAYLOAD:]
+
+    # reset buffer
+    tx_buffer.clear()
+
+    if remaining:
+        tx_buffer.append(remaining)
+
+    return chunk
 
 def try_transmit():
     global last_tx_time, tx_buffer, last_tx_duration
@@ -277,7 +279,7 @@ def try_transmit():
     # use previous TX duration
     if now - last_tx_time > last_tx_duration:
         
-        final_payload = "".join(tx_buffer)
+        final_payload = get_payload_chunk()
 
         # compute NEXT duration BEFORE sending
         next_duration = estimate_tx_interval(len(final_payload))
@@ -289,7 +291,7 @@ def try_transmit():
             last_tx_time = now
             last_tx_duration = next_duration   # store for next cycle
 
-            print(f"[TX]: SENT | next wait = {next_duration:.2f}sec\n")
+            print(f"[TX]: SENT CHUNK | size={len(final_payload)} | wait={next_duration:.2f}sec\n")
 
 
 # ========================== Data Buffer ===============================

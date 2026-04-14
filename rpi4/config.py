@@ -24,13 +24,13 @@ current_cell = None          # Cell where drone currently resides
 px_to_area_scale = 1000    # scale factor to convert pixel area to actual area
 gps_scale = 100000           # scale factor to convert GPS coordinates
 MSG_ID = 1
-
+MAX_PAYLOAD = 128           # must be multiple of 16    
 # =========================================================
 # GPS SIMULATION
 # =========================================================
 drone_lat = LAT0
 drone_lon = LON0
-GPS_UPDATE_INTERVAL = 5.0   # Spent 2 seconds in each grid cell
+GPS_UPDATE_INTERVAL = 5.0   # Spent 5 seconds in each grid cell
 
 # =========================================================
 # CAMERA CONFIG
