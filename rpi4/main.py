@@ -245,7 +245,7 @@ last_tx_time = 0
 last_tx_duration = 0   # store duration of previous TX
 
 def estimate_tx_interval(payload_len):
-    airtime = 0.05 * payload_len   # rough LoRa scaling (depends on SF/BW)
+    airtime = 0.05 * payload_len * 2   # rough LoRa scaling (depends on SF/BW)
     decrypt_time = 0.002 * payload_len
     return airtime + decrypt_time + 0.5   # margin
 
