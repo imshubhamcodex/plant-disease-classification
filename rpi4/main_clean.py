@@ -368,7 +368,8 @@ try:
     
         cv2.putText(frame, f"Classified: {len(detections)}", (10, 95), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 255), 2)
         
-        cv2.imshow("Drone Live Feed", frame)
+        # cv2.imshow("Drone Live Feed", frame)
+        print(f"FPS: {fps:.2f}")
         # ======================================================================
         
         
