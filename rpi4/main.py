@@ -281,16 +281,16 @@ def try_transmit():
 
         # compute NEXT duration BEFORE sending
         # next_duration = estimate_tx_interval(len(final_payload))
-        next_duration = 5
+        next_duration = 6
 
-        with lora_tx_lock:
-            comm.encrypt_and_send(final_payload)
-            tx_buffer.clear()
+        # with lora_tx_lock:
+        comm.encrypt_and_send(final_payload)
+        tx_buffer.clear()
 
-            last_tx_time = now
-            last_tx_duration = next_duration   # store for next cycle
+        last_tx_time = now
+        last_tx_duration = next_duration   # store for next cycle
 
-            print(f"[TX]: SENT | next wait = {next_duration:.2f}sec\n")
+        print(f"[TX]: SENT | next wait = {next_duration:.2f}sec\n")
 
 
 # ========================== Data Buffer ===============================

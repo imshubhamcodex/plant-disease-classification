@@ -30,7 +30,7 @@ MAX_PAYLOAD = 256         # must be multiple of 16
 # =========================================================
 drone_lat = LAT0
 drone_lon = LON0
-GPS_UPDATE_INTERVAL = 5.0   # Spent 5 seconds in each grid cell
+GPS_UPDATE_INTERVAL = 10.0   # Spent 5 seconds in each grid cell
 
 # =========================================================
 # CAMERA CONFIG
