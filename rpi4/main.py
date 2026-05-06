@@ -280,7 +280,8 @@ def try_transmit():
         final_payload = "".join(tx_buffer)
 
         # compute NEXT duration BEFORE sending
-        next_duration = estimate_tx_interval(len(final_payload))
+        # next_duration = estimate_tx_interval(len(final_payload))
+        next_duration = 5
 
         with lora_tx_lock:
             comm.encrypt_and_send(final_payload)
