@@ -247,7 +247,7 @@ last_tx_duration = 0   # store duration of previous TX
 def estimate_tx_interval(payload_len):
     airtime = 0.05 * payload_len   # rough LoRa scaling (depends on SF/BW)
     decrypt_time = 0.002 * payload_len
-    return airtime + decrypt_time + 0.5   # margin
+    return airtime + decrypt_time + 1   # margin
 
 def get_payload_chunk():
     global tx_buffer
@@ -404,7 +404,7 @@ try:
     
         cv2.putText(frame, f"Classified: {len(detections)}", (10, 95), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 255), 2)
         
-        # cv2.imshow("Drone Live Feed", frame)
+        cv2.imshow("Drone Live Feed", frame)
         # print(f"FPS: {fps:.2f}")
         # ======================================================================
         

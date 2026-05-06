@@ -24,7 +24,7 @@ current_cell = None          # Cell where drone currently resides
 px_to_area_scale = 1000    # scale factor to convert pixel area to actual area
 gps_scale = 100000           # scale factor to convert GPS coordinates
 MSG_ID = 1
-MAX_PAYLOAD = 128           # must be multiple of 16    
+MAX_PAYLOAD = 256         # must be multiple of 16    
 # =========================================================
 # GPS SIMULATION
 # =========================================================
@@ -37,7 +37,7 @@ GPS_UPDATE_INTERVAL = 5.0   # Spent 5 seconds in each grid cell
 # =========================================================
 WIDTH, HEIGHT = 640, 480
 FRAME_SIZE = int(WIDTH * HEIGHT * 1.5)
-INFERENCE_SIZE = 320  # imgsz=128 matches to this ->  # yolo export model=best.pt format=ncnn imgsz=128
+INFERENCE_SIZE = 128  # imgsz=128 matches to this ->  # yolo export model=best.pt format=ncnn imgsz=128
 
 # =========================================================
 # YOLO Classifier Model
