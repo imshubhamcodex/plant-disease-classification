@@ -276,7 +276,8 @@ def try_transmit():
     # use previous TX duration
     if now - last_tx_time > last_tx_duration:
         
-        final_payload = get_payload_chunk()
+        # final_payload = get_payload_chunk()
+        final_payload = "".join(tx_buffer)
 
         # compute NEXT duration BEFORE sending
         next_duration = estimate_tx_interval(len(final_payload))
